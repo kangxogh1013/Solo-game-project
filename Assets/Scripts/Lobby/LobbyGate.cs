@@ -79,7 +79,7 @@ public class LobbyGate : MonoBehaviour
 
         // New Input System 기준
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !keyboard.fKey.wasPressedThisFrame) return;
+        if (keyboard == null || !keyboard.eKey.wasPressedThisFrame) return;
 
         TryEnter();
     }

@@ -294,6 +294,13 @@ public static class LobbyBuilder
         zoneCollider.size = new Vector3(4f, 2f, 3f);
 
         var memoryBox = zone.gameObject.AddComponent<MemoryBox>();
+        if (memoryBox == null)
+        {
+            // 컴포넌트 추가 실패 시 원인을 콘솔에 명확히 남기고 중단
+            Debug.LogError("[LobbyBuilder] MemoryBox 추가 실패: Assets/Scripts/Lobby/MemoryBox.cs의 파일명과 클래스명을 확인하세요.");
+            return;
+        }
+
         var so = new SerializedObject(memoryBox);
         so.FindProperty("progress").objectReferenceValue = progress;
         so.FindProperty("endingDoor").objectReferenceValue = endingDoor;
@@ -396,7 +403,7 @@ public static class LobbyBuilder
         tmp.fontSize = fontSize;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
-        tmp.textWrappingMode = TextWrappingModes.Normal; // 변경: Unity 6 TMP 방식 (줄바꿈 켜기)
+        tmp.textWrappingMode = TextWrappingModes.Normal; // Unity 6 TMP 방식 (줄바꿈 켜기)
         tmp.richText = true;
         return tmp;
     }

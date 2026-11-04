@@ -61,7 +61,7 @@ public class LobbyBoard : MonoBehaviour
         if (alwaysShowStatus || !playerInRange) return;
 
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !keyboard.fKey.wasPressedThisFrame) return;
+        if (keyboard == null || !keyboard.eKey.wasPressedThisFrame) return;
 
         panelOpen = !panelOpen;
         ApplyPanel();
