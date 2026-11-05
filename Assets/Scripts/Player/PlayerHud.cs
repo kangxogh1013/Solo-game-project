@@ -4,6 +4,7 @@ using UnityEngine.UI;
 
 /// 플레이어 HUD: 왼쪽 HP 바(마크의 하트 자리), 오른쪽 스태미나 바(마크의 허기 자리)
 /// 런타임에 Canvas를 자동 생성하므로 Inspector 설정이 필요 없다.
+/// 바는 Image.fillAmount로 줄이고 늘린다 (앵커를 바꾸면 매 프레임 레이아웃이 다시 계산되어 끊긴다).
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerHud : MonoBehaviour
 {
@@ -14,14 +15,16 @@ public class PlayerHud : MonoBehaviour
 
     private PlayerStats stats;
     private GameObject canvasGo;
-    private RectTransform hpFill;
-    private RectTransform staminaFill;
+    private Image hpFill;
+    private Image staminaFill;
     private TMP_Text hpText;
     private TMP_Text staminaText;
 
-    // 숫자가 바뀔 때만 문자열을 만든다 (매 프레임 GC 방지)
+    // 값이 바뀔 때만 갱신 (매 프레임 문자열·UI 갱신 방지)
     private int shownHp = -1;
     private int shownStamina = -1;
+    private float shownHpRatio = -1f;
+    private float shownStaminaRatio = -1f;
 
     private void Awake()
     {
@@ -49,9 +52,13 @@ public class PlayerHud : MonoBehaviour
     {
         if (hpFill == null) return;
 
-        SetRatio(hpFill, stats.MaxHp > 0f ? stats.Hp / stats.MaxHp : 0f);
-        SetRatio(staminaFill, stats.MaxStamina > 0f ? stats.Stamina / stats.MaxStamina : 0f);
+        float hpRatio = stats.MaxHp > 0f ? stats.Hp / stats.MaxHp : 0f;
+        float staminaRatio = stats.MaxStamina > 0f ? stats.Stamina / stats.MaxStamina : 0f;
 
+        SetFill(hpFill, hpRatio, ref shownHpRatio);
+        SetFill(staminaFill, staminaRatio, ref shownStaminaRatio);
+
+        // 글자는 숫자가 바뀔 때만 다시 만든다
         int hp = Mathf.CeilToInt(stats.Hp);
         if (hp != shownHp)
         {
@@ -67,10 +74,14 @@ public class PlayerHud : MonoBehaviour
         }
     }
 
-    /// 채워지는 부분의 오른쪽 끝을 비율만큼 옮긴다
-    private static void SetRatio(RectTransform fill, float ratio)
+    /// 채움 양이 실제로 바뀐 경우에만 fillAmount를 바꾼다
+    private static void SetFill(Image fill, float ratio, ref float cached)
     {
-        fill.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
+        ratio = Mathf.Clamp01(ratio);
+        if (Mathf.Abs(ratio - cached) < 0.001f) return;
+
+        cached = ratio;
+        fill.fillAmount = ratio;
     }
 
     // ───────────────────────── UI 생성 ─────────────────────────
@@ -92,17 +103,23 @@ public class PlayerHud : MonoBehaviour
         staminaFill = CreateBar(root, BarX, new Color(0.3f, 0.8f, 0.35f), out staminaText);
     }
 
-    /// 배경 + 채움 + 글자 3겹으로 된 바를 만든다. 채움 RectTransform을 반환한다.
-    private static RectTransform CreateBar(Transform root, float x, Color fillColor, out TMP_Text label)
+    /// 배경 + 채움 + 글자 3겹으로 된 바를 만든다. 채움 Image를 반환한다.
+    private static Image CreateBar(Transform root, float x, Color fillColor, out TMP_Text label)
     {
-        // 바 배경: 화면 하단 중앙 기준
+        // 바 배경
         RectTransform bg = NewRect("Bar", root, new Vector2(0.5f, 0f), new Vector2(x, BarY), BarWidth, BarHeight);
         bg.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
 
-        // 채움: 배경을 꽉 채우고, 비율에 따라 anchorMax.x를 바꾼다
-        RectTransform fill = NewRect("Fill", bg, new Vector2(0.5f, 0.5f), Vector2.zero, BarWidth, BarHeight);
-        Stretch(fill);
-        fill.gameObject.AddComponent<Image>().color = fillColor;
+        // 채움: 왼쪽에서부터 fillAmount 비율만큼 보인다
+        RectTransform fillRt = NewRect("Fill", bg, new Vector2(0.5f, 0.5f), Vector2.zero, BarWidth, BarHeight);
+        Stretch(fillRt);
+        var fill = fillRt.gameObject.AddComponent<Image>();
+        fill.color = fillColor;
+        fill.raycastTarget = false;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+        fill.fillAmount = 1f;
 
         // 글자: 가장 위에 그린다
         RectTransform labelRt = NewRect("Label", bg, new Vector2(0.5f, 0.5f), Vector2.zero, BarWidth, BarHeight);
